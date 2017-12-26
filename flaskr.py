@@ -18,11 +18,20 @@ app.config.from_object(__name__)     #搜索对象中所有变量名均为大写
 def connect_db():
 	return sqlite3.connect(app.config['DATABASE'])
 
+def get_db():
+    """Opens a new database connection if there is none yet for the
+    current application context.
+    """
+    if not hasattr(g, 'sqlite_db'):
+        g.sqlite_db = connect_db()
+    return g.sqlite_db
+
 def init_db():
-    with closing(connect_db()) as db:
-        with app.open_resource('schema.sql', mode='r') as f:
-            db.cursor().executescript(f.read())
-        db.commit()
+    """Initializes the database."""
+    db = get_db()
+    with current_app.open_resource('schema.sql', mode='r') as f:
+        db.cursor().executescript(f.read())
+    db.commit()
 
 @app.before_request
 def before_request():
@@ -43,7 +52,8 @@ def show_entries():
 
 @app.route('/add', methods=['POST'])
 def add_entry():
-	if not session.get('logged_in')
+	if not session.get('logged_in'):
+		abort(401)
 	g.db.execute('insert into entries (title, text) values (?, ?)',
 				[request.form['title'], request.form['text']])
 	g.db.commit()
